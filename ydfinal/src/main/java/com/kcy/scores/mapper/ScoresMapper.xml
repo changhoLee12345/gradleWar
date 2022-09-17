@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.scores.mapper.ScoresMapper">
+	<select id="lectureList" resultType="com.kcy.scores.service.ScoresVo">
+		SELECT 
+		        c.class_id,
+		        c.class_ck,
+        		c.class_to,
+		        
+		        cs.course_title
+		FROM 
+				k_class as c
+		JOIN 
+				k_course as cs
+		ON 
+				c.course_id = cs.course_id
+		WHERE 
+				prof_id = #{userId}
+		AND
+                c.class_ck > 0
+	</select>
+	
+	<select id="scoresMemberList" resultType="com.kcy.scores.service.ScoresVo">
+			select 
+			        st.stu_id, 
+			        st.student_grade, 
+			        st.student_sem, 
+			        st.student_aca_yn, 
+			        
+			        
+			        cm.class_member_id,
+			        cm.class_id,
+			        
+			        r.quiz_r_point,
+			        
+			        u.user_name,
+			        u.user_dept
+			FROM
+			        k_students as st
+			JOIN
+			        k_users as u
+			ON
+			        st.stu_id = u.user_id
+			JOIN
+			        k_class_member as cm
+			ON
+			        cm.stu_id = st.stu_id
+			JOIN
+                    k_quiz_r as r
+            ON
+                    r.class_member_id = cm.class_member_id
+			WHERE
+			        cm.class_id = #{classId}
+	</select>
+	
+	<insert id="scoresInsert">
+		<selectKey order="BEFORE" keyProperty="scoreId" resultType="String">
+		 SELECT CONCAT("Score", NEXTVAL(score_seq))
+		</selectKey>
+		INSERT INTO
+			k_scores
+		(
+			score_id,
+			class_member_id,
+			score_attn,
+			score_quiz,
+			score_mid,
+			score_final,
+			score_date
+		)
+		VALUES
+		(
+			#{scoreId},
+			#{classMemberId},
+			#{scoreAttn},
+			#{scoreQuiz},
+			#{scoreMid},
+			#{scoreFinal},
+			date_format(now(), '%Y%m%d')	
+		)
+	</insert>
+	
+	<insert id="gpaPointInsert">
+		INSERT INTO
+			k_gpa
+		(
+			score_id,
+			gpa_id,
+			gpa_point,
+			gpa_grade
+		)
+		VALUES
+		(
+			#{scoreId},
+			CONCAT("G", NEXTVAL(score_seq)),
+			#{gpaPoint},
+			#{gpaGrade}
+		)
+	</insert>
+	
+	<select id="stuScoreList" resultType="com.kcy.scores.service.ScoresVo">
+		SELECT
+		    u.user_name,
+		    
+		    st.stu_id,
+		    
+		    kc.credit_total,
+		    (kc.credit_major + kc.credit_lib) as credit_acquire,
+		    kc.credit_major,
+		    kc.credit_lib,
+		    
+		    c.class_year,
+		    c.class_sem,
+		    
+		    cm.class_member_id,
+		    
+		    g.gpa_point
+    	FROM
+   			k_students as st
+		JOIN
+    		k_users as u
+		ON
+    		u.user_id = st.stu_id
+		JOIN
+    		k_credit as kc
+		ON
+    		kc.stu_id = st.stu_id
+		JOIN
+    		k_class_member as cm
+		ON
+    		cm.stu_id = st.stu_id
+		JOIN
+    		k_scores as s
+		ON
+    		cm.class_member_id = s.class_member_id
+		JOIN
+    		k_gpa as g
+		ON
+    		s.score_id = g.score_id
+		JOIN
+    		k_class as c
+		ON
+    		c.class_id = cm.class_id
+		WHERE
+    		st.stu_id = #{userId}
+	</select>
+	
+	<select id="classScoreList" resultType="com.kcy.scores.service.ScoresVo">
+		SELECT
+		    co.course_title,
+		    co.course_type,
+		    co.course_credit,
+		    
+		    ((sc.score_attn + sc.score_quiz + sc.score_mid + sc.score_final) / 4) as total,
+		    
+		    g.gpa_grade,
+		    g.gpa_point,
+		    
+		    c.class_id,
+		    c.class_sem,
+		    c.class_year,
+		    cm.class_member_id,
+		    
+		    cm.stu_id
+		FROM
+    		k_class as c
+		JOIN 
+    		k_course as co
+		ON 
+    		c.course_id = co.course_id
+		JOIN
+    		k_class_member as cm
+		ON
+    		cm.class_id = c.class_id
+		JOIN 
+    		k_scores as sc
+		ON 
+    		sc.class_member_id = cm.class_member_id
+		JOIN 
+    		k_gpa as g
+		ON 
+    		g.score_id = sc.score_id
+		WHERE
+    		cm.stu_id = #{userId}
+    	<choose>
+			<when test="classSem != null || classYear != null">
+				AND
+					c.class_sem = #{classSem}
+				AND
+					c.class_year = #{classYear}
+			</when>
+		</choose>
+	</select>
+	
+	<select id="scoresCtn" resultType="com.kcy.scores.service.ScoresVo">
+		SELECT 
+			   COUNT(*) as stuCtn 
+		from 
+			   k_quiz_r kqr
+        join 
+               k_class_member kcm 
+        on 
+               kqr.class_member_id = kcm.class_member_id 
+        WHERE 
+               kcm.class_id = #{classId} 
+	</select>
+	
+	<select id="standardSelect" resultType="com.kcy.scores.service.ScoresVo">
+		SELECT
+				TRUNCATE((gpa_standard_attn / 100), 2) as gpa_standard_attn, 
+				TRUNCATE((gpa_standard_quiz / 100), 2) as gpa_standard_quiz, 
+				TRUNCATE((gpa_standard_mid / 100), 2) as gpa_standard_mid, 
+				TRUNCATE((gpa_standard_final / 100), 2) as gpa_standard_final
+		FROM
+				k_gpa_standard
+		WHERE
+				class_id = #{classId}
+	</select>
+	
+</mapper>

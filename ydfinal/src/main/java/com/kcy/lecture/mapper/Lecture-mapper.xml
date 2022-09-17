@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.lecture.mapper.LectureMapper">
+
+		<insert id="lectureInsert">
+		<selectKey order="BEFORE" keyProperty="classId" resultType="String">
+			select CONCAT("CL",NEXTVAL(class_no_seq))
+		</selectKey>
+		
+		
+			insert into k_class_reg(
+				  class_id,
+				  course_id,
+			  	  prof_id,
+			   	  class_to,
+			      class_year,
+			      class_sem,
+			      class_syl,
+			      class_yn,
+			      class_title,
+			      class_syl_original
+			      )
+			values(
+				   #{classId},
+				   #{courseId},
+				   #{profId},
+				   #{classTo},
+				   2022,
+				   #{classSem},
+				   #{classSyl},
+				   default,
+				   #{classTitle},
+				   #{classSylOriginal}
+				   )
+		
+		</insert>
+		
+		<insert id="gpaStandardInsert">
+			insert into 
+					k_gpa_standard (
+						gpa_standard_attn, 
+						gpa_standard_quiz, 
+						gpa_standard_mid, 
+						gpa_standard_final, 
+						class_id
+					)
+					values (
+						#{gpaStandardAttn},
+						#{gpaStandardQuiz},
+						#{gpaStandardMid},
+						#{gpaStandardFinal},
+						#{classId}
+					);
+		
+		</insert>
+		
+		<select id="lectureList" resultType="com.kcy.lecture.service.LectureVO">
+		select 
+			kcr.class_title , 
+			kcr.class_id,
+		    kc.course_title,
+			kcr.course_id, 
+			ku.user_name,
+			kcr.prof_id, 
+			kc.course_credit, 
+			kcr.class_to, 
+			kcr.class_sem,
+			kcr.class_syl_original,
+			kcr.class_yn
+			 from k_class_reg kcr 
+			 join k_users ku on ku.user_id  = kcr.prof_id 
+			 join k_course kc on kcr.course_id = kc.course_id 
+			 order by class_id;
+		</select>
+		
+		<update id="lectureUpdate" parameterType="com.kcy.lecture.service.LectureVO">
+				
+			UPDATE k_class_reg
+			 SET class_yn = 'y'
+			WHERE class_id = #{classId}
+			
+		</update>
+		
+		<insert id="lectureInsertClass">
+			insert into k_class(
+				class_id, 
+			    course_id, 
+				prof_id, 
+				class_to, 
+				class_year, 
+				class_sem, 
+				class_syl
+						 )
+			select class_id, 
+				course_id, 
+				prof_id, 
+				class_to, 
+				class_year, 
+				class_sem, 
+				class_syl
+			  from k_class_reg
+			 where class_id = #{classId}
+		</insert>
+		
+		<select id="openLectureList" resultType="com.kcy.lecture.service.OpenLectureVO">
+		
+			SELECT c.class_id,
+			       j.major_name, 
+			       u.user_name, 
+			       co.course_title, 
+			       c.course_id, 
+			       co.course_type, 
+			       co.course_credit, 
+			       CONCAT(c.class_sem,'학기') as classSem,
+			       c.class_to, 
+			       c.class_ck, 
+			       c.class_syl,
+			       c.class_syl_original
+			       
+			  from k_class  as c 
+			  join k_course as co  on c.course_id  = co.course_id 
+			  join k_users  as u   on u.user_id = c.prof_id  
+			  join k_major  as j   on j.major_id = co.major_id 
+			 where class_id not in  (SELECT class_id  
+			                           from k_class_member 
+			                          where stu_id =#{userId})
+			order by class_id
+		</select>
+		
+		
+		<select id="majorSelect" resultType="com.kcy.lecture.service.OpenLectureVO">
+			   SELECT             
+                   c.class_id,
+			       j.major_name, 
+			       u.user_name, 
+			       co.course_title, 
+			       c.course_id, 
+			       co.course_type, 
+			       co.course_credit, 
+			       CONCAT(c.class_sem,'학기') as classSem,
+			       c.class_to, 
+			       c.class_ck, 
+			       c.class_syl
+			  from k_class  as c 
+			  join k_course as co  on c.course_id  = co.course_id 
+			  join k_users  as u   on u.user_id = c.prof_id  
+			  join k_major  as j   on j.major_id = co.major_id 
+			 where class_id not in  (SELECT class_id  
+			                           from k_class_member 
+			                          where stu_id = #{userId} ) and j.major_name = #{majorName}
+			order by class_id
+		
+		
+		</select>
+		
+		<select id="myMajor" resultType="com.kcy.lecture.service.OpenLectureVO">
+		
+			   SELECT user_dept  FROM  k_users 
+    		   WHERE user_id = #{userId};
+		</select>
+	
+</mapper>

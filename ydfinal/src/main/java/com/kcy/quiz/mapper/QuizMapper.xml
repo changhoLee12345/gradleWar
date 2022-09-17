@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.quiz.mapper.QuizMapper">
+	<!-- 황하경 220831 -->
+	<!-- 전체 과제 -->
+	<select id="quizList" resultType="map">
+		SELECT
+		    h.class_id, 
+		    h.quiz_h_title, 
+		    h.quiz_h_content, 
+		    h.quiz_h_file, 
+		    h.quiz_h_id, 
+		    h.quiz_h_seq, 
+		    h.quiz_h_original,
+		    
+		    d.quiz_d_date, 
+		    d.quiz_d_openday, 
+		    d.quiz_d_closeday, 
+		    d.quiz_d_id, 
+		    d.quiz_h_id,
+		    
+		    cm.class_id
+		FROM 
+			k_quiz_h as h
+		JOIN 
+			k_quiz_d as d
+		ON 	
+			h.quiz_h_id = d.quiz_h_id
+        JOIN
+            k_class_member as cm
+        ON 
+            h.class_id = cm.class_id
+        WHERE 
+        	cm.stu_id = #{userId}
+       <choose>
+        <when test="classId != null">
+       	AND
+        	cm.class_id = #{classId}
+        </when>
+       </choose>
+       
+	</select>
+	
+	<!-- 과제 헤더 -->
+	<insert id="quizHInsert">
+		<selectKey order="BEFORE" keyProperty="quizHId" resultType="String">
+		 SELECT CONCAT("HD", NEXTVAL(quiz_h_id_seq))
+		</selectKey>
+		INSERT INTO k_quiz_h 
+	        (
+	        class_id, 
+	        quiz_h_title, 
+	        quiz_h_content, 
+	        quiz_h_file, 
+	        quiz_h_id, 
+	        quiz_h_seq, 
+	        quiz_h_original
+	        )
+		SELECT 
+			class_id, 
+			#{quizHTitle}, 
+			#{quizHContent}, 
+			#{quizHFile}, 
+			#{quizHId}, 
+			NEXTVAL(quiz_seq), 
+			#{quizHOriginal}
+        FROM 
+        	k_class
+        WHERE 
+        	prof_id = #{userId} 
+        AND
+        	class_id = #{classId}
+	</insert>
+	<!-- 과제 date 입력 -->
+	<insert id="quizDInsert">
+		INSERT INTO k_quiz_d
+			(
+			quiz_d_date, 
+			quiz_d_openday, 
+			quiz_d_closeday, 
+			quiz_d_id, 
+			quiz_h_id
+			)
+		SELECT
+			date_format(now(), '%Y%m%d'), 
+			date_format(now(), '%Y%m%d'), 
+			#{quizDCloseday}, 
+			CONCAT("D", NEXTVAL(quiz_d_id_seq)), 
+			quiz_h_id
+		FROM
+			k_quiz_h
+		WHERE
+			quiz_h_id = #{quizHId}
+	</insert>
+	
+	<!-- 과제 선택 세부 -->
+	<select id="quizSelect" resultType="com.kcy.quiz.service.QuizVo">
+		SELECT
+			h.class_id, 
+			h.quiz_h_title, 
+			h.quiz_h_content, 
+			h.quiz_h_file, 
+			h.quiz_h_id, 
+			h.quiz_h_seq, 
+			h.quiz_h_original,
+			
+		    d.quiz_d_date, 
+		    d.quiz_d_openday, 
+		    d.quiz_d_closeday, 
+		    d.quiz_d_id, 
+		    d.quiz_h_id
+		FROM
+			k_quiz_h as h
+		JOIN
+			k_quiz_d as d
+		ON
+			h.quiz_h_id = d.quiz_h_id
+		WHERE
+			h.quiz_h_seq = #{quizHSeq}
+	</select>
+	<!-- 과제 제출 (학생) -->
+	<insert id="quizAccept">
+	    INSERT INTO k_quiz_r
+			(
+			quiz_r_content, 
+			quiz_r_date, 
+			quiz_r_file, 
+			quiz_d_id, 
+			class_member_id, 
+			quiz_r_id, 
+			quiz_r_orginal
+			)
+        SELECT
+        	#{quizRContent}, 
+        	date_format(now(), '%Y%m%d'), 
+        	#{quizRFile}, 
+        	#{quizDId}, 
+        	class_member_id, 
+        	CONCAT("R", NEXTVAL(quiz_r_id_seq)), 
+        	#{quizROrginal}
+        FROM
+        	k_class_member
+        WHERE 
+        	stu_id = #{userId} 
+       	AND
+       		class_id = #{classId}
+	</insert>
+	
+	<select id="quizAcceptDetail" resultType="com.kcy.quiz.service.QuizVo">
+		SELECT
+                r.quiz_r_content,
+                r.quiz_r_date,
+                r.quiz_r_file,
+                r.quiz_r_orginal,
+                r.quiz_r_id,
+                r.quiz_d_id,
+                r.class_member_id,
+                
+                cm.class_member_id,
+                cm.stu_id,
+    
+                
+                h.quiz_h_id,
+                h.class_id
+        FROM
+                k_quiz_r as r
+        JOIN
+                k_class_member as cm
+        ON
+                r.class_member_id = cm.class_member_id
+        JOIN
+                k_quiz_d as d
+        ON
+                r.quiz_d_id = d.quiz_d_id
+        JOIN
+        		k_quiz_h as h
+        ON
+        		d.quiz_h_id = h.quiz_h_id
+        WHERE 
+                r.quiz_d_id = #{quizDId}
+        AND
+        		cm.stu_id = #{userId}
+	</select>
+	
+	<!-- (교수) 과제 제출 목록 -->
+	<select id="quizViewList" resultType="map">
+		SELECT
+			h.quiz_h_title, 
+			h.quiz_h_seq,
+			h.class_id,
+
+            c.class_to,
+            co.course_title,
+
+            d.quiz_d_date,
+            d.quiz_d_id,
+            NVL(d.quiz_d_cnt, 0) as 'quiz_d_cnt'
+		FROM
+			k_quiz_h as h
+        JOIN
+            k_class as c
+        ON
+            h.class_id = c.class_id
+        JOIN
+            k_quiz_d as d
+        ON
+            d.quiz_h_id = h.quiz_h_id
+        JOIN
+            k_course as co
+        ON
+            co.course_id = c.course_id
+        WHERE
+            c.prof_id = #{userId}
+	</select>
+	
+	<!-- (교수) 과제 낸 학생 조회 -->
+	<select id="quizView" resultType="com.kcy.quiz.service.QuizVo">
+           SELECT
+               u.user_name, 
+               
+               r.quiz_r_content, 
+               r.quiz_r_orginal, 
+               r.quiz_r_date, 
+               r.quiz_r_id,
+               r.quiz_r_file,
+               
+               h.quiz_h_seq, 
+               h.quiz_h_file,
+               
+               d.quiz_h_id,
+               
+               cm.class_id, 
+               cm.stu_id
+           FROM
+               k_quiz_r as r
+           JOIN
+               k_class_member as cm
+           ON
+               r.class_member_id = cm.class_member_id
+           JOIN
+               k_users as u
+           ON
+               u.user_id = cm.stu_id
+           JOIN
+               k_quiz_d as d
+           ON
+               r.quiz_d_id = d.quiz_d_id
+           JOIN
+               k_quiz_h as h
+           ON
+               d.quiz_h_id = h.quiz_h_id
+           WHERE
+               h.quiz_h_seq = #{quizHSeq}
+	</select>
+	
+	<update id="quizModify">
+		UPDATE
+            k_quiz_r
+        SET
+            quiz_r_content = #{quizRContent}, quiz_r_file = #{quizRFile}, quiz_r_orginal = #{quizROrginal}
+        WHERE
+            quiz_r_id = #{quizRId}
+	</update> 
+	
+	<!-- (교수) 학생의 과제 상세 보기 -->
+	<select id="quizDetailView" resultType="com.kcy.quiz.service.QuizVo">
+			SELECT
+                u.user_name, 
+                u.user_id,
+                
+                r.quiz_r_content,
+                r.quiz_r_orginal, 
+                r.quiz_r_date, 
+                r.quiz_r_id,
+                r.quiz_r_file,
+                
+                h.quiz_h_seq, 
+                h.quiz_h_file,
+                d.quiz_h_id,
+                
+                cm.class_id, 
+                cm.stu_id,
+                cm.class_member_id
+            FROM
+                k_quiz_r as r
+            JOIN
+                k_class_member as cm
+            ON
+                r.class_member_id = cm.class_member_id
+            JOIN
+                k_users as u
+            ON
+                u.user_id = cm.stu_id
+            JOIN
+                k_quiz_d as d
+            ON
+                r.quiz_d_id = d.quiz_d_id
+            JOIN
+                k_quiz_h as h
+            ON
+                d.quiz_h_id = h.quiz_h_id
+            WHERE
+                r.quiz_r_id = #{quizRId}
+            AND
+                u.user_id = #{stuId}
+	</select>
+	
+	<!-- 점수 입력 -->
+	<update id="quizPointInsert">
+		UPDATE
+			k_quiz_r
+		SET
+			quiz_r_point = #{quizRPoint}
+		WHERE
+			quiz_r_id = #{quizRId}
+	</update>
+		
+	<!-- update cnt(학생 과제 제출) -->
+	<update id="quizDUpdate">
+		UPDATE
+			k_quiz_d
+		SET
+			quiz_d_cnt = quiz_d_cnt + 1
+		WHERE 
+			quiz_d_id = #{quizDId}
+	</update>
+	
+	<!-- 강좌 코드 -->
+	<select id="getClassId" resultType="com.kcy.quiz.service.QuizVo">
+        SELECT
+			c.class_id, co.course_title, cm.class_member_id
+		FROM
+			k_class_member as cm
+        join
+            k_class as c
+        on
+            c.class_id = cm.class_id
+        join
+            k_course as co
+        on
+            co.course_id = c.course_id
+		WHERE
+			cm.stu_id = #{userId}
+	</select>
+	
+	<select id="getClassIdProf" resultType="com.kcy.quiz.service.QuizVo">
+        SELECT
+			c.class_id, co.course_title
+		FROM
+            k_class as c
+        join
+            k_course as co
+        on
+            co.course_id = c.course_id
+        where
+			c.prof_id = #{userId}
+	</select>
+	
+</mapper>

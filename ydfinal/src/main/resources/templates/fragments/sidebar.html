@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<th:block th:fragment="sidebarFragment">
+
+  <div class="sidenav-header">
+    <a class="navbar-brand m-0" href="/">
+      <span class="font-weight-bold text-white fs-6">
+        <i class="fa-solid fa-building-columns mx-3 mt-1" style="font-size: x-large;"></i>KCY학사관리
+      </span>
+    </a>
+  </div>
+  <hr class="horizontal light mt-0 mb-2">
+  <div class="collapse navbar-collapse  w-auto  max-height-vh-100" id="sidenav-collapse-main">
+    <ul class="navbar-nav">
+    
+        
+    
+    
+      <li class="nav-item" sec:authorize="hasAnyRole('ROLE_STU','ROLE_ADMIN')">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#userMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-user me-2" style="width: 20px;"></i>학적 관리
+          </span>
+        </a>
+      </li>
+
+      <div class="collapse" id="userMgr">
+        <script>
+          // 스크립트 위치가 중요!! 최초에 밑에 것들 렌더링 전에 여기서 show/hide 여부를 결정하고 쿠키에 상태 저장함
+          $('#userMgr').on('show.bs.collapse', function(){
+            Cookies.set('userMgr')
+          })
+          $('#userMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('userMgr')
+          })
+          if (Cookies.get('userMgr')) {
+            $('#userMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/stuInfo">학적조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/stuAcaInfo" >학적변동 조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/stuAcaInsert">학적변동 신청</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/allStuInfo" >학적정보 조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/allAcaInfo" >학적변동 관리</a>
+          </div>
+          <div class="nav-item d-none">
+            <a class="nav-link text-white py-1" href="#">졸업요건 확인</a>
+          </div>
+          <div class="nav-item d-none">
+            <a class="nav-link text-white py-1" href="#">증명서 출력</a>
+          </div>
+
+          <!-- url에 id를 달아서 get요청 받도록 설정한 경우 작성방식
+              (사실 생각해보면 이렇게 할 이유가 전혀 없다! 하면 안 됨!
+              왜냐면 url에 수동으로 /학번 달아버리면 자기계정 말고 다른 사람 계정 정보도 다 볼 수 있으니까!
+              그걸 해소하려면 컨트롤러단에서 세션id와 url에 수동기입한 학번을 대조해서 일치할 경우만 정상 진행되게 처리해야 함.
+              당연히 스프링 시큐리티에서 자체적으로 그런 처리에 관한 서비스를 제공해주지 않는다. 왜냐면 아무도 바보같이 그렇게 안 할 테니까. 
+              그야말로 불필요한 코딩작업이 추가 발생하는 것임.
+              걍 애초에 url에 id 다는 식으로 하지말고 걍 심플하게 공통 요청 url (예: "/stuInfo")로만 받고,
+              모델에 id값을 넘겨야할 필요가 있을 시에는
+              컨트롤러 단에서 pirincipal이나 @AuthenticationPrincipal 등의 객체를 이용하여 세션id를 직접 service또는 mapper에 바로 태워주면 된다!!
+              그래도 타임리프 th:href 문법 학습을 위해 여기 작성 방식은 남겨놓는다.)
+               -->
+            <!-- (PathVariable미사용시) 작성방법1 -->
+<!--           <a th:href="@{ '/stuAcaInfo?id='+ ${#authentication.name} }">학적변동 이력</a> -->
+
+            <!-- (PathVariable미사용시) 작성방법2 -->
+<!--           <a th:href="@{ /stuAcaInfo(id=${#authentication.name}) }">학적변동 이력</a> -->
+          
+            <!-- (PathVariable사용시) 작성방법: 변수기능을 활용한다! 변수 여러개 선언도 가능! {var1}/{var2}.. -->
+<!--           <a th:href="@{ /stuAcaInfo/{var}(var=${#authentication.name}) }">학적변동 이력</a> -->
+        </div>
+      </div>
+
+
+
+
+
+      <li class="nav-item" sec:authorize="hasAnyRole('ROLE_PROF','ROLE_ADMIN')">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#profMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-graduation-cap me-2" style="width: 20px;"></i>교수 정보
+          </span>
+        </a>
+      </li>
+
+      <div class="collapse" id="profMgr">
+        <script>
+          // 스크립트 위치가 중요!! 최초에 밑에 것들 렌더링 전에 여기서 show/hide 여부를 결정하고 쿠키에 상태 저장함
+          $('#profMgr').on('show.bs.collapse', function(){
+            Cookies.set('profMgr')
+          })
+          $('#profMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('profMgr')
+          })
+          if (Cookies.get('profMgr')) {
+            $('#profMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/profInfo">내 정보 조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/allProfInfo" >교수정보 조회</a>
+          </div>
+
+        </div>
+      </div>
+
+
+
+
+      <li class="nav-item" sec:authorize="hasAnyRole('ROLE_STU','ROLE_ADMIN')">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#billMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-regular fa-credit-card me-2" style="width: 20px;"></i>등록금 관리
+          </span>
+        </a>
+      </li>
+      
+      <div class="collapse" id="billMgr">
+        <script>
+          $('#billMgr').on('show.bs.collapse', function(){
+            Cookies.set('billMgr')
+          })
+          $('#billMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('billMgr')
+          })
+          if (Cookies.get('billMgr')) {
+            $('#billMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav" sec:authorize="hasAnyRole('ROLE_STU','ROLE_ADMIN')">
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/payList">수납 전체 이력</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/payCheck">납부자 조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/billsInsert">등록금 고지서 등록</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/billList">등록금 고지서 확인</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/billCheck">등록금 고지서 확인</a>
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+      <li class="nav-item">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#classMgr" role="button" aria-expanded="false" aria-controls="classMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-pen-clip me-2" style="width: 20px;"></i>강의 관리
+          </span>
+        </a>
+      </li>
+      
+      <div class="collapse" id="classMgr">
+        <script>
+          $('#classMgr').on('show.bs.collapse', function(){
+            Cookies.set('classMgr')
+          })
+          $('#classMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('classMgr')
+          })
+          if (Cookies.get('classMgr')) {
+            $('#classMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/openlecturelist">수강신청</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/studentinchargelist">담당학생 확인</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/attendanceSelect">출석 체크</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/classScheduleSelect">강의 시간표 조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasAnyRole('ROLE_STU','ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/noticelist">공지 및 강의자료</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasAnyRole('ROLE_STU','ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/quizlist">과제 게시판</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/profevaluationlist">만족도 평가</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/quizinsert">과제 등록</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/noticeinsert">공지 및 자료 등록</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasAnyRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/quizviewlist">과제 확인 페이지</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/lectureinsert">강의 개설 신청</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/scorelecturelist">성적 입력</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/evaluationconfirmationlist">만족도 평가 열람</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            <a class="nav-link text-white py-1" href="/lecturelist">강의 개설 승인</a>
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+      <li class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#scoreMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-book-open-reader me-2" style="width: 20px;"></i>성적 관리
+          </span>
+        </a>
+      </li>
+      
+      <div class="collapse" id="scoreMgr">
+        <script>
+          $('#scoreMgr').on('show.bs.collapse', function(){
+            Cookies.set('scoreMgr')
+          })
+          $('#scoreMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('scoreMgr')
+          })
+          if (Cookies.get('scoreMgr')) {
+            $('#scoreMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="#">전체 성적 조회</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="#">학기별 세부 내역</a>
+          </div>
+        </div>
+      </div>
+
+
+
+      <li class="nav-item">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#jidoMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-people-arrows me-2" style="width: 20px;"></i>지도교수 관리
+          </span>
+        </a>
+      </li>
+      
+      <div class="collapse" id="jidoMgr">
+        <script>
+          $('#jidoMgr').on('show.bs.collapse', function(){
+            Cookies.set('jidoMgr')
+          })
+          $('#jidoMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('jidoMgr')
+          })
+          if (Cookies.get('jidoMgr')) {
+            $('#jidoMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item">
+            <a class="nav-link text-white py-1" href="/matchingStd">지도 교수 매칭</a>
+          </div>
+          <div class="nav-item">
+            <a class="nav-link text-white py-1" href="/matchingList">매칭 이력 관리</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/matchingChange">지도교수 변경 신청</a>
+          </div>
+          <div class="nav-item">
+            <a class="nav-link text-white py-1" href="/matchingChangeList">지도교수 변경 신청자 확인</a>
+          </div>
+        </div>
+      </div>
+      
+
+
+
+
+      <li class="nav-item" sec:authorize="hasAnyRole('ROLE_STU','ROLE_PROF')">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#mentorMgr" role="button" aria-expanded="false" aria-controls="mentorMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-comments me-2" style="width: 20px;"></i>상담 관리
+          </span>
+        </a>
+      </li>
+      
+      <div class="collapse" id="mentorMgr">
+        <script>
+          $('#mentorMgr').on('show.bs.collapse', function(){
+            Cookies.set('mentorMgr')
+          })
+          $('#mentorMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('mentorMgr')
+          })
+          if (Cookies.get('mentorMgr')) {
+            $('#mentorMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/schedule">상담스케줄 설정</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/apply">상담신청</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/careerSelectList">진로탐색 문답지 관리</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/applyList">상담신청 이력관리</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasAnyRole('ROLE_STU','ROLE_PROF')">
+            <a class="nav-link text-white py-1" href="/chat/room">채팅</a>
+          </div>
+          <div class="nav-item" sec:authorize="hasRole('ROLE_STU')">
+            <a class="nav-link text-white py-1" href="/profCheck">담당교수 확인</a>
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+      <li class="nav-item">
+        <a class="nav-link text-white btn btn-secondary" data-bs-toggle="collapse" href="#schMgr">
+          <span class="nav-link-text ms-1">
+            <i class="fa-regular fa-calendar-check me-2" style="width: 20px;"></i>학사 일정
+          </span>
+        </a>
+      </li>
+      
+      <div class="collapse" id="schMgr">
+        <script>
+          $('#schMgr').on('show.bs.collapse', function(){
+            Cookies.set('schMgr')
+          })
+          $('#schMgr').on('hide.bs.collapse', function(){
+            Cookies.remove('schMgr')
+          })
+          if (Cookies.get('schMgr')) {
+            $('#schMgr').addClass('show')
+          }
+        </script>
+        <div class="navbar-nav">
+          <div class="nav-item" sec:authorize="isAuthenticated()">
+            <a class="nav-link text-white py-1" href="/allSch">학사 일정 조회</a>
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+      <li class="nav-item" sec:authorize="isAnonymous()">
+        <a class="nav-link text-white " th:classappend="${active} == 'click_login' ? 'active bg-gradient-primary'" href="/login">
+          <span class="nav-link-text ms-1">Sign In</span>
+        </a>
+      </li>
+      
+      
+      
+      <li class="nav-item" sec:authorize="isAuthenticated()">
+        <a class="nav-link text-white" href="/doLogout" id="btn-logout">
+          <span class="nav-link-text ms-1">
+            <i class="fa-solid fa-arrow-right-from-bracket me-2" style="width: 20px;"></i>Logout
+          </span>
+        </a>
+      </li>
+    </ul>
+  </div>
+  
+
+
+
+
+
+
+
+  <script>
+    // 이 스크립트를 전체 레이아웃으로 빼면 전체 페이지가 로딩된 다음에 스크립트를 실행하므로 여전히 깜빡임이 발생함
+    // 그래서 여기 사이드바fragment에 달아놔야 content 페이지 로딩전에 show 여부가 결정나므로 깜빡임이 사라진다!! SPA느낌 남!
+    // (주의!) jQuery CDN을 각페이지 마다 달아 놓으면, 그 페이지 접근시 상위 jQuery 이벤트가 충돌?무시?가 된다!!
+    // 반드시 jQuery CDN은 앱 전체 레이아웃 최상위에 딱 한개만 달아놓고 각 페이지에 달려있는 건 다 빼자 
+    
+    // →9.3.수정: show 클래스 자체를 아예 페이지 최초 렌더링시점에 부여를 한다면? 당연히 애초에 show를 달고 그려지니깐 진짜 깜빡임이 0이 됨!!
+    // 그래서 각 소메뉴 마다 스크립트를 달아주는 방식으로 변경함
+    
+//     $('.collapse-kcy').on('show.bs.collapse', function(){
+//       Cookies.set('collapseShown', $(this).attr('id'))
+//     })
+    
+//     $('.collapse-kcy').on('hide.bs.collapse', function(){
+//       Cookies.remove('collapseShown');
+//     })
+    
+//     let item = Cookies.get('collapseShown');
+//     if (item != null) {
+//       $('.collapse-kcy').removeClass('show');
+//       $('#' + item).addClass('show');
+//     }
+
+//   $('#btn-logout').on('click', function(){
+//     sessionStorage.removeItem("myName");
+//   })
+  </script>
+
+</th:block>
+</html>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.mentoring.schedule.mapper.CalenMapper">
+
+	<select id="calendarSelectList" resultType="com.kcy.mentoring.schedule.vo.scheduleVO" parameterType="com.kcy.mentoring.schedule.vo.scheduleVO">
+		SELECT *
+		FROM k_mentoring_schedule join k_sch_times on k_mentoring_schedule.mtr_sch_timecode = k_sch_times.mtr_sch_timecode
+		where user_id = #{userId}
+	</select>
+	
+	<select id="calendarSelect" resultType="com.kcy.mentoring.schedule.vo.scheduleVO" parameterType="com.kcy.mentoring.schedule.vo.scheduleVO">
+		SELECT mtr_sch_id, user_id, mtr_sch_date, mtr_sch_timecode, check_code
+		FROM k_mentoring_schedule
+		WHERE mtr_sch_id= #{mtrSchId}
+	</select>
+	
+	<insert id="calendarInsert" parameterType="com.kcy.mentoring.schedule.vo.scheduleVO">
+		 insert into k_mentoring_schedule(mtr_sch_id, user_id, mtr_sch_date, mtr_sch_timecode, CHECK_CODE) values 
+		 (nextval(scheduleSeq),#{userId},#{mtrSchDate},#{mtrSchTimecode},default)
+	</insert>
+	
+	<delete id="calendarDelete" parameterType="com.kcy.mentoring.schedule.vo.scheduleVO">
+		delete from k_mentoring_schedule 
+		where mtr_sch_id = #{mtrSchId}
+	</delete>
+</mapper>

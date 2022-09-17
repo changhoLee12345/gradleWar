@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.users.mapper.UsersMapper">
+
+<!-- 기본 인적사항 (모든 사용자) -->
+<select id="userInfo" resultType="CustomMap">
+  select * 
+    from k_users
+   where user_id = #{param}
+</select>
+
+
+<!-- Start 전체 학생 학적 목록 (행정) -->
+  <!-- 조건 공통 쿼리 -->
+<sql id="allStuCri">
+  <if test=" schId != null and schId != '' ">
+    and user_id like concat('%',#{schId},'%')  <!-- 달러 변수는 값에 따옴표가 없고, 샵변수는 있고 차이임 -->
+  </if>
+  <if test=" schName != null and schName != '' ">
+    and user_name like concat('%',#{schName},'%')
+  </if>
+  <if test=" schSsn != null and schSsn != '' ">
+    and SUBSTR(user_ssn,1,6) like concat('%',#{schSsn},'%')
+  </if>
+  <if test=" schSex != null and schSex != '' ">
+    and user_sex like concat('%',#{schSex},'%')
+  </if>
+  <if test=" schDept != null and schDept != '' ">
+    and user_dept like concat('%',#{schDept},'%')
+  </if>
+  <if test=" schPhone != null and schPhone != '' ">
+    and user_phone like concat('%',#{schPhone},'%')
+  </if>
+  <if test=" schEmail != null and schEmail != '' ">
+    and user_email like concat('%',#{schEmail},'%')
+  </if>
+  <if test=" schAddr != null and schAddr != '' ">
+    and user_addr like concat('%',#{schAddr},'%')
+  </if>
+  <if test=" schNation != null and schNation != '' ">
+    and user_nation like concat('%',#{schNation},'%')
+  </if>
+</sql>
+
+
+  <!-- 전체 카운팅 -->
+<select id="allStuInfoCnt" resultType="int">
+  SELECT COUNT(*) FROM k_users
+  WHERE user_type = 
+  <if test=" uType == 'stu' ">'ROLE_STU'</if>
+  <if test=" uType == 'prof' ">'ROLE_PROF'</if>
+  <include refid="allStuCri"></include>
+</select>
+
+  <!-- 메인 쿼리 -->
+<select id="allStuInfoProc" resultType="CustomMap">
+  select if(SUBSTR(user_id,1,2) > 50, concat('19',user_id), concat('20',user_id)) nId, 
+         user_id, 
+         user_name, 
+         if(SUBSTR(user_ssn,1,2) > 50, concat('19',user_ssn), concat('20',user_ssn)) nSSN, 
+         SUBSTR(user_ssn,1,6) user_ssn,
+         user_sex,
+         user_dept,
+         user_phone,
+         user_email,
+         user_addr,
+         user_nation
+  from k_users
+  where user_type = 
+  <if test=" uType == 'stu' ">'ROLE_STU'</if>
+  <if test=" uType == 'prof' ">'ROLE_PROF'</if>
+  <include refid="allStuCri"></include>
+  
+  order by
+  <if test="order == 0 and orderDir == 'asc'">nId</if>
+  <if test="order == 0 and orderDir == 'desc'">nId desc</if>
+  <if test="order == 1 and orderDir == 'asc'">user_name</if>
+  <if test="order == 1 and orderDir == 'desc'">user_name desc</if>
+  <if test="order == 2 and orderDir == 'asc'">nSSN</if>
+  <if test="order == 2 and orderDir == 'desc'">nSSN desc</if>
+  <if test="order == 3 and orderDir == 'asc'">user_sex</if>
+  <if test="order == 3 and orderDir == 'desc'">user_sex desc</if>
+  <if test="order == 4 and orderDir == 'asc'">user_dept</if>
+  <if test="order == 4 and orderDir == 'desc'">user_dept desc</if>
+  <if test="order == 5 and orderDir == 'asc'">user_phone</if>
+  <if test="order == 5 and orderDir == 'desc'">user_phone desc</if>
+  <if test="order == 6 and orderDir == 'asc'">user_email</if>
+  <if test="order == 6 and orderDir == 'desc'">user_email desc</if>
+  <if test="order == 7 and orderDir == 'asc'">user_addr</if>
+  <if test="order == 7 and orderDir == 'desc'">user_addr desc</if>
+  <if test="order == 8 and orderDir == 'asc'">user_nation</if>
+  <if test="order == 8 and orderDir == 'desc'">user_nation desc</if>
+    
+<!--   limit #{param1}, #{param2}          mybatis에서 파라미터 2개일때 작성법(순서대로 param1, param2, ...) -->
+  limit #{start}, #{length} <!-- 서비스 파라미터가 n개로 늘어날거 같아서 map방식으로 변경함 -->
+</select>
+<!-- End 전체 학생 학적 목록 (행정) -->
+
+
+
+
+
+
+
+
+<!-- 본인 정보 조회 (교수) -->
+<select id="profInfo" resultType="CustomMap">
+  select u.user_id, u.user_name, 
+         u.user_dept, substr(u.user_ssn,1,6) user_birth,
+         u.user_phone, if(u.user_sex = 'f','여','남') user_sex, 
+         u.user_email, u.user_nation,
+         p.prof_lab,
+         p.prof_field,
+         p.prof_edu,
+         p.prof_career,
+         p.prof_paper,
+         u.user_pic
+         
+    from k_users u 
+    join k_professors p on (u.user_id = p.prof_id) 
+    
+   where u.user_id = #{param} <!-- get방식으로 파라미터 id 하나만 들어가므로 임의로 적어도 됨(예:param) -->
+</select>
+
+
+
+
+
+
+
+
+<!-- 본인 학적 조회 (학생) -->
+<select id="stuInfo" resultType="CustomMap">
+  select u.user_id, u.user_name, 
+         s.student_grade, s.student_sem, substr(u.user_ssn,1,6) user_birth,
+         u.user_dept, if(u.user_sex = 'f','여','남') user_sex, 
+         s.student_aca_yn, u.user_nation,
+         s.student_regdate, u.user_phone, 
+         s.student_graddate, u.user_email,
+         c.credit_total,
+         u.user_pic
+         
+    from k_users u 
+    left join k_students s on (u.user_id = s.stu_id) 
+    left join k_credit c using (stu_id) 
+    
+   where u.user_id = #{param} <!-- get방식으로 파라미터 id 하나만 들어가므로 임의로 적어도 됨(예:param) -->
+</select>
+
+
+<!-- 본인 학적 변동 이력 (학생) -->
+<select id="stuAcaInfo" resultType="CustomMap">
+  select u.user_name, u.user_id,
+         u.user_dept, u.user_phone,
+         sa.aca_id, sa.aca_type, 
+         sa.aca_start, ks.sch_title AS aca_start_t, ks.sch_start AS aca_start_s, ks.sch_end AS aca_start_e,
+         sa.aca_end, ke.sch_title AS aca_end_t, ke.sch_start AS aca_end_s, ke.sch_end AS aca_end_e,
+         sa.aca_reason, 
+         sa.aca_yn, sa.aca_reject, 
+         sa.aca_date, sa.aca_file
+         
+    from k_users u 
+    left join k_student_aca sa on (u.user_id = sa.stu_id)
+    left join k_schedule ks on (ks.sch_id = sa.aca_start)
+    left join k_schedule ke on (ke.sch_id = sa.aca_end)
+    
+   where u.user_id = #{param}
+   order by sa.aca_date desc
+</select>
+
+
+<!-- 본인 학적 변동 신청 폼 (학생) -->
+<select id="stuAcaInsertForm" resultType="CustomMap">
+  select sch_id, 
+         sch_start, 
+         sch_end, 
+         sch_title
+  
+    from k_schedule 
+    
+   where sch_type = 'SEMESTER' 
+     and sch_start > now() 
+     
+   order by 1
+   limit 10 <!-- 5년치(10학기)만 추출 -->
+   
+</select>
+
+
+<!-- 본인 학적 변동 신청 실행 (학생) -->
+<insert id="stuAcaInsertProc" parameterType="map">
+  insert into k_student_aca 
+  values (
+         default, 
+         #{acaType},
+         <if test="acaType == '휴학'">
+           #{acaStartT},
+           #{acaEndT},
+           #{acaReason},
+           #{acaReasonD},
+         </if>
+         <if test="acaType == '복학'">
+           #{returnStartT},
+           null,
+           null,
+           null,
+         </if>
+         <if test="acaType == '자퇴'">
+           null,
+           null,
+           #{acaReason},
+           #{acaReasonD},
+         </if>
+         "신청중",
+         null,
+         #{id},
+         now(),
+         #{fileName}
+         )
+</insert>
+
+
+<!-- 본인 학적 변동 신청 삭제 (학생) -->
+<delete id="stuAcaDelete">
+  delete from k_student_aca
+   where aca_id = #{acaId}
+
+</delete>
+
+
+<!-- 학적 변동 신청 단건 조회 (학생, 행정) -->
+<select id="stuAcaView" resultType="CustomMap">
+  select u.user_name, u.user_id,
+         u.user_dept, u.user_phone,
+         sa.aca_id, sa.aca_type, 
+         sa.aca_start, ks.sch_title AS aca_start_t, ks.sch_start AS aca_start_s, ks.sch_end AS aca_start_e,
+         sa.aca_end, ke.sch_title AS aca_end_t, ke.sch_start AS aca_end_s, ke.sch_end AS aca_end_e,
+         sa.aca_reason, sa.aca_reason_d, 
+         sa.aca_yn, sa.aca_reject, 
+         sa.aca_date, sa.aca_file
+         
+    from k_users u 
+    join k_student_aca sa on (u.user_id = sa.stu_id)
+    left join k_schedule ks on (ks.sch_id = sa.aca_start)
+    left join k_schedule ke on (ke.sch_id = sa.aca_end)
+    
+   where aca_id = #{acaId}
+    
+   order by sa.aca_date desc
+
+</select>
+
+
+
+<!-- 전체 학생 학적 변동 이력 (행정) -->
+<select id="allAcaInfo" resultType="CustomMap">
+  select u.user_name, u.user_id,
+         sa.aca_id, sa.aca_type, 
+         sa.aca_start, ks.sch_title AS aca_start_t, ks.sch_start AS aca_start_s, ks.sch_end AS aca_start_e,
+         sa.aca_end, ke.sch_title AS aca_end_t, ke.sch_start AS aca_end_s, ke.sch_end AS aca_end_e,
+         sa.aca_reason, 
+         sa.aca_yn, sa.aca_reject, 
+         sa.aca_date, sa.aca_file
+         
+    from k_users u 
+    join k_student_aca sa on (u.user_id = sa.stu_id)
+    left join k_schedule ks on (ks.sch_id = sa.aca_start)
+    left join k_schedule ke on (ke.sch_id = sa.aca_end)
+    
+   order by sa.aca_date desc
+</select>
+
+
+<!-- 학적 변동 신청 승인 (행정) -->
+<update id="stuAcaAdmit">
+  update k_student_aca 
+     set aca_yn = "승인"
+   where aca_id = #{acaId}
+
+</update>
+
+<!-- 학적 변동 신청 반려 (행정) -->
+<update id="stuAcaReject">
+  update k_student_aca 
+     set aca_yn = "반려",
+         aca_reject = #{acaReject}
+   where aca_id = #{acaId}
+
+</update>
+
+<!-- 학적 변동 확정 취소 (행정) -->
+<update id="stuAcaAdmitCancel">
+  update k_student_aca 
+     set aca_yn = "신청중",
+         aca_reject = NULL
+   where aca_id = #{acaId}
+
+</update>
+
+
+
+
+</mapper>

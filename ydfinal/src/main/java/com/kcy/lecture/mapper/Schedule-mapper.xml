@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.lecture.mapper.ScheduleMapper">
+
+	<select id="selectschedule" resultType="com.kcy.lecture.service.ClassScheduleVO">
+		
+		SELECT class_timetable_id,class_timetable_name,class_timetable_start,class_timetable_end  FROM k_class_timetable 
+		WHERE class_timetable_days = #{classTimetableDays}
+	
+	</select>
+	
+		<select id="getScheduleDays" resultType="com.kcy.lecture.service.ClassScheduleVO">
+		SELECT DISTINCT kct.class_timetable_days,kcst.schedule_title  
+		FROM k_class_timetable as kct join k_class_schedule_t kcst on kct.class_timetable_days = kcst.class_timetable_days
+		order by 1
+			
+		</select>
+		
+		<insert id="scheduleInsert">
+			INSERT into k_class_time 
+			values(
+			 #{classId},
+			 #{classTimetableId},
+			 #{roomId}
+			 )
+		</insert>
+		
+		<select id="classScheduleSelect" resultType="map">
+			SELECT 
+			kct.class_timetable_id,
+			kcm.class_id, 
+			ku.user_name,c.course_title, 
+			kct2.class_timetable_start, 
+			kct2.class_timetable_end, 
+			kct2.class_timetable_days, 
+			kct2.class_timetable_name, 
+			kr.room_building, 
+			kr.room_no
+			 FROM k_class_time kct
+				join k_class_member kcm     on kct.class_id  = kcm.class_id 
+				join k_class kc             on kc.class_id  = kcm.class_id
+				JOIN k_course c             on c.course_id  = kc.course_id 
+				join k_class_timetable kct2 on kct2.class_timetable_id  = kct.class_timetable_id
+				join k_users ku             on ku.user_id = kc.prof_id
+				join k_rooms kr             on kr.room_id = kct.room_id 
+				
+				where kcm.stu_id = #{userId}
+				order by kct2.class_timetable_code;
+			
+		
+		</select>
+			
+			<select id="classScheduleCk" resultType="com.kcy.lecture.service.ClassScheduleVO">
+				SELECT *  FROM k_class_timetable;
+			</select>
+		
+
+	<update id="lectureCheck">
+		UPDATE k_class_reg
+			 SET class_yn = 't'
+			WHERE class_id = #{classId}
+	
+	</update>
+
+</mapper>

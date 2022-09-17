@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/layout}">
+<th:block layout:fragment="content">
+<!-- 토스터 -->
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css"
+		integrity="sha512-3pIirOrwegjM6erE5gPSwkUzO+3cTjpnV9lexlNZqvupR64iZBnOOTiiLPb9M36zpMScbmUNIcHUqKD47M719g=="
+		crossorigin="anonymous" referrerpolicy="no-referrer" />
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
+		integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw=="
+		crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+ 
+  <!-- 상단 내비바 -->
+  <th:block th:replace="fragments/navbar :: navbarFragment"></th:block>
+  <!-- 본문 start -->
+  
+<div class="container-fluid">
+   <div class="row justify-content-center">
+      <div class="card p-3 me-3 mt-5 col-10">
+        <!-- 각 페이지 타이틀바 -->
+        <div class="card-header p-0 position-relative mt-n4 mb-4 z-index-2">
+          <div class="bg-secondary bg-gradient-secondary shadow-secondary border-radius-lg py-3">
+            <h6 class="text-white ps-3 m-0">페이지명</h6>
+              <input  th:value="${#authentication.principal.username}" type="hidden" id="userid">
+          </div>
+        </div>
+              <table class="table align-items-center mb-0 " style="text-align: center;">
+        <thead>
+            <tr>
+            	<th>문항</th>
+            	<th>매우좋음</th>
+     			<th>좋음</th>
+            	<th>보통이다</th>
+            	<th>별로다</th>
+            	<th>매우 별로다</th>
+            </tr>
+        </thead>
+        <tbody>
+        	<tr th:each="data,index : ${evaluation}">
+        		<td th:text="${data.profQContent}" style="text-align: left;"></td>
+        		<td><input type="radio" th:name="|evaluation${index.index}|" th:value="1" class="test"></td>
+        		<td><input type="radio" th:name="|evaluation${index.index}|" th:value="2" class="test"></td>
+        		<td><input type="radio" th:name="|evaluation${index.index}|" th:value="3" class="test"></td>
+        		<td><input type="radio" th:name="|evaluation${index.index}|" th:value="4" class="test"></td>
+        		<td><input type="radio" th:name="|evaluation${index.index}|" th:value="5" class="test"></td>
+        	</tr>
+        </tbody>
+        </table>
+        <input type="hidden" th:value="${classId}" class="cid">
+        	<input type="hidden" th:value="${ck.class_member_id}" id="cmid">
+        <input  th:value="${#authentication.principal.username}" type="hidden" id="userid">
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button class="btn btn btn-secondary me-md-2 mt-3" id="btn"  th:text="제출하기"></button>
+        </div>
+        </div>
+      </div>
+      </div>
+<script>
+	
+	
+		$("#btn").on("click",submitData)
+		
+		function submitData(){
+			
+			let lenghtCk = $("input[class='test']:checked").length;
+			
+			
+			if(lenghtCk < 7){
+				toastr.error("모든 문항에 답변하세요")
+			}
+			
+			else if(lenghtCk == 7){
+				
+				let evaluation0 = $("input[name='evaluation0']:checked").val()
+				let evaluation1 = $("input[name='evaluation1']:checked").val()
+				let evaluation2 = $("input[name='evaluation2']:checked").val()
+				let evaluation3 = $("input[name='evaluation3']:checked").val()
+				let evaluation4 = $("input[name='evaluation4']:checked").val()
+				let evaluation5 = $("input[name='evaluation5']:checked").val()
+				let evaluation6 = $("input[name='evaluation6']:checked").val()
+				let id = $("#userid").val()
+				let cid = $(".cid").val()
+				let cmid = $("#cmid").val()
+				
+				
+				Kcy.fire({
+					  title: '제출하시겠습니까?',
+					  text: "제출시 재평가는 불가능합니다",
+					  icon: 'warning',
+					  showCancelButton: true,
+					  confirmButtonText: '제출',
+					  cancelButtonText: '취소'
+					}).then((result) => {
+					  if (result.isConfirmed) {
+							$.ajax({
+								url:"/evaluationinsert",
+								type:"post",
+								data:{
+									evaluation0,evaluation1 ,evaluation2,evaluation3,evaluation4,evaluation5,evaluation6,
+								    classId: cid,
+								    classMemberId:cmid
+								},
+								success:function(data){
+								    Kcy.fire(
+								      '제출완료',
+								      '평가해주셔서 감사합니다',
+								      'success'
+								    )
+								setTimeout("location.href= '/profevaluationlist'",1000);
+								}
+							})
+						  
+						
+					  }
+					})
+			}
+		}
+		
+		
+
+</script>
+</th:block>
+</html>

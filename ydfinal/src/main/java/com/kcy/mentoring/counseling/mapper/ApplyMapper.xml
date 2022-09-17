@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.mentoring.counseling.mapper.ApplyMapper">
+
+	<select id="applySelectList" resultType="com.kcy.mentoring.counseling.vo.ApplyVO" parameterType="String">
+		SELECT *
+		FROM k_mentoring_schedule sc join k_sch_times ti on sc.mtr_sch_timecode = ti.mtr_sch_timecode
+		where user_id = (SELECT prof_id
+						 FROM k_matching
+						 WHERE stu_id=#{id} AND matching_type = '0') AND sc.CHECK_CODE = '0'
+		
+	</select>
+	
+	<select id="applyCheck" resultType="String" parameterType="String">
+		SELECT IFNULL(mtr_status,'xxx') as mtr_status
+		FROM k_mentoring 
+		RIGHT OUTER JOIN (SELECT '') AS m_dual
+		ON mtr_count =  (SELECT max(mtr_count) FROM k_mentoring where matching_id=(SELECT matching_id
+							       			FROM k_matching
+							      			WHERE stu_id=#{id} AND matching_type = '0'))
+		AND matching_id=(SELECT matching_id
+						FROM k_matching
+						WHERE stu_id=#{id} AND matching_type = '0')
+	</select>
+	
+	<select id="applyCheckPrint" resultType="com.kcy.mentoring.counseling.vo.ApplyVO" parameterType="String">
+		SELECT mtr_count, career_h_date
+		FROM k_mentoring me join k_career_h ca
+		on me.mtr_id = ca.mtr_id
+		WHERE ca.stu_id=#{id} AND mtr_status = 'ing';
+	</select>
+	
+	<select id="applySelect" resultType="com.kcy.mentoring.counseling.vo.ApplyVO" parameterType="String">
+		SELECT career_q_id, career_q_content, career_list_id, career_q_yn
+		FROM k_career_q
+		WHERE career_q_yn='Y' AND career_list_id=(SELECT career_list_id
+										  FROM k_career_list
+									      WHERE prof_id=(SELECT IFNULL(prof_id,'xxx') as prof_id
+													     FROM k_matching
+													     WHERE stu_id=#{userId} AND matching_type = '0'))
+	</select>
+	
+	<insert id="applyInsert" parameterType="com.kcy.mentoring.counseling.vo.ApplyVO">
+		INSERT INTO k_career_d(career_h_id, career_q_result, career_q_id)
+		VALUES((select MAX(career_h_id) from k_career_h where stu_id = #{userId}),#{careerQResult}, #{careerQId})
+	</insert>
+	
+	<insert id="applyListInsert" parameterType="com.kcy.mentoring.counseling.vo.ApplyVO">
+		INSERT INTO k_career_h(career_h_id, stu_id, career_h_date,mtr_id)
+		VALUES(nextval(sq_career_h_id),#{userId}, default,(SELECT mtr_id
+														   FROM k_mentoring
+														   WHERE mtr_sch_id=#{mtrSchId}))
+
+	</insert>
+	
+	<insert id="applyHistoryInsert" parameterType="String">
+		INSERT INTO k_mentoring(matching_id, mtr_count, mtr_status, mtr_id, mtr_sch_id, mtr_cancel, mtr_fileName,prof_id)
+		VALUES((SELECT matching_id
+				FROM k_matching
+				WHERE stu_id=#{userId} 
+				AND matching_type ='0'),(select IFNULL(MAX(mtr_count)+1,1)
+										 from k_mentoring ALIAS_FOR_SUBQUERY
+										 where mtr_status in ('com','can') AND matching_id = (SELECT matching_id
+																				   FROM k_matching
+																				   WHERE stu_id=#{userId} 
+																				   AND matching_type ='0')), default, nextval(sq_mtr_id), #{mtrSchId}, default, default, #{profId});
+	</insert>
+	
+	<delete id="applyDelete" parameterType="com.kcy.mentoring.counseling.vo.ApplyVO">
+		<!-- 없음 -->
+	</delete>
+	<!-- 교수의 담당학생 확인 -->
+	<select id="applyList" resultType="com.kcy.mentoring.counseling.vo.ApplyVO" parameterType="String">
+		SELECT
+		  me.matching_id,
+		  me.mtr_count,
+		  me.mtr_status,
+		  me.mtr_sch_id,
+		  me.mtr_cancel,
+		  me.prof_id,
+		  ma.stu_id, 
+		  ku.user_name,
+		  sc.mtr_sch_date,
+		  ti.mtr_sch_start,
+		  ti.mtr_sch_end,
+		  me.mtr_id 
+		FROM
+		  k_users ku
+		  join k_matching ma on ku.user_id = ma.stu_id
+		  join k_mentoring me on ma.matching_id = me.matching_id
+		  join k_mentoring_schedule sc on me.mtr_sch_id = sc.mtr_sch_id
+		  join k_sch_times ti on sc.mtr_sch_timecode = ti.mtr_sch_timecode
+		where
+		  ma.prof_id = #{id}
+		  
+	</select>
+	<!-- 학생 진로탐색 결과 확인 -->
+	<select id="applyResultList" resultType="com.kcy.mentoring.counseling.vo.ApplyVO" parameterType="com.kcy.mentoring.counseling.vo.ApplyVO">
+		SELECT d.career_q_result, q.career_q_content
+		FROM k_career_d d join k_career_q q
+		on d.career_q_id = q.career_q_id 
+		AND d.career_h_id = (SELECT career_h_id
+							 FROM k_career_h
+							 WHERE mtr_id =#{mtrId})
+	</select>
+	<!-- 학생 정보 확인 -->
+	<select id="applyInfo" resultType="com.kcy.mentoring.counseling.vo.ApplyInfoVO" parameterType="String">
+		SELECT u.user_id, u.user_type, u.user_name, u.user_ssn, u.user_sex, u.user_dept, u.user_addr, u.user_phone, u.user_email, u.user_pw, u.user_nation, u.user_pic ,s.student_regdate, s.student_grade, s.student_sem, s.student_prof
+		FROM k_users u join k_students s
+		ON u.user_id = s.stu_id 
+		AND user_id=#{stuId}
+	</select>
+	<!-- 상담 신청 온거 취소 하는 거 -->
+	<update id="applyCancel">
+		UPDATE k_mentoring
+		SET mtr_status='can', mtr_cancel=#{mtrCancel}
+		WHERE matching_id =#{matchingId} AND mtr_status ='ing'
+	</update>
+	
+	<!-- 상담일지 불러오기 -->
+	<select id="journalList" resultType="com.kcy.mentoring.counseling.vo.JournalVO" parameterType="String">
+		SELECT lo.mtr_id, lo.mtr_log_subject, lo.mtr_log_content, lo.mtr_log_comment, lo.mtr_home, mtr_date, me.mtr_count, me.mtr_status
+		FROM k_mentoring_log lo join  k_mentoring me
+		on me.mtr_id = lo.mtr_id
+		AND matching_id=(SELECT matching_id
+						 FROM k_matching
+						 WHERE stu_id=#{stuId} AND matching_type ='0') AND me.mtr_count = #{mtrCount}
+	</select>
+	
+	<insert id="journalInsert" parameterType="com.kcy.mentoring.counseling.vo.JournalVO">
+		INSERT INTO k_mentoring_log
+		(mtr_id, mtr_log_subject, mtr_log_content, mtr_log_comment, mtr_home, mtr_date)
+		VALUES(#{mtrId}, #{mtrLogSubject},  #{mtrLogContent}, #{mtrLogComment}, #{mtrHome}, default)
+	</insert>
+	<update id="mentoringUpdate" parameterType="com.kcy.mentoring.counseling.vo.JournalVO">
+		UPDATE k_mentoring
+		SET  mtr_status='com'
+		WHERE mtr_id=#{mtrId}
+	</update>
+	
+	<update id="mentoringUpdate2" parameterType="String">
+		UPDATE k_mentoring
+		SET  mtr_status='fill'
+		WHERE matching_id=(SELECT matching_id
+						   FROM k_matching
+						   WHERE stu_id=#{stuId} AND matching_type = '0')  
+		AND mtr_count = (SELECT MAX(mtr_count) AS mtr_count FROM k_mentoring
+						 where matching_id=(SELECT matching_id
+						   FROM k_matching
+						   WHERE stu_id=#{stuId} AND matching_type = '0'))
+	</update>
+	
+		<!-- 담당교수 정보 불러오기 -->
+	<select id="profCheck" resultType="com.kcy.mentoring.counseling.vo.ApplyInfoVO" parameterType="String">
+		SELECT pr.prof_edu, pr.prof_career, pr.prof_paper, pr.prof_lab, us.user_id, us.user_name, us.user_sex, us.user_dept,  us.user_phone, us.user_email, us.user_pic
+		FROM k_professors pr join k_users us
+		on us.user_id = pr.prof_id 
+		WHERE prof_id=(SELECT prof_id
+						FROM k_matching
+						WHERE stu_id=#{stuId} AND matching_type = '0');
+	</select>
+	 
+	<update id="scheduleCheck" parameterType="String">
+		UPDATE k_mentoring_schedule
+		SET CHECK_CODE='1'
+		WHERE mtr_sch_id=#{mtrSchId}
+	</update>
+	
+<!-- 메모 불러오기 -->
+	<select id="selectMemo" resultType="String" parameterType="String">
+		SELECT IFNULL(mtr_memo_content,'xxx')
+		FROM k_mentoring_memo
+		WHERE mtr_id=#{mtrId};
+		
+	</select>
+	
+	<!-- 메모 작성 -->
+	<insert id="insertMemo" parameterType="com.kcy.mentoring.counseling.vo.ApplyVO">
+		INSERT INTO k_mentoring_memo
+		(mtr_id, mtr_memo_content)
+		VALUES((SELECT MAX(mtr_id)
+				FROM k_mentoring
+				WHERE matching_id=(SELECT matching_id
+								   FROM k_matching
+								   WHERE prof_id=#{profId} AND stu_id=#{stuId})),
+				#{mtrMemoContent} )
+		
+	</insert>
+	
+	
+	
+	
+</mapper>

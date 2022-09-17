@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kcy.matching.mapper.MatchingMapper">
+
+<select id="majorbList" resultType="com.kcy.bill.service.MajorbVO">
+	SELECT major_id, major_name 
+	FROM k_major
+	WHERE major_closeday IS NULL; 
+</select>
+
+<select id="matchingList" resultType="com.kcy.matching.service.MatchingListVO">
+  	SELECT m.matching_id,
+  		   u.user_name AS pr_name, 
+  		   u.user_dept AS pr_dept, 
+  		   ku.user_name AS st_name, 
+		   ku.user_dept AS st_dept, 
+		   m.matching_type, 
+		   m.matching_date
+	FROM k_matching AS m 
+	JOIN k_users AS u 
+	ON u.user_id = m.prof_id  
+	JOIN k_users AS ku 
+	ON ku.user_id = m.stu_id
+	<where>
+		<if test="userDept != null and userDept != ''">
+			and u.user_dept = #{userDept}
+		</if>
+		<if test="stdDept != null and stdDept != ''">
+			and ku.user_dept = #{stdDept}
+		</if>
+		<if test="matchingType != null and matchingType != ''">
+			and m.matching_type = #{matchingType} 
+		</if>		
+	</where>   
+  </select>
+
+<select id="matchingStdList" resultType="com.kcy.matching.service.MatchingStdVO">
+	SELECT s.stu_id, 
+	   u.user_name,
+	   s.student_aca_yn,
+	   u.user_dept,
+	   s.student_grade, 
+	   u.user_phone,
+	   s.student_prof 
+	FROM k_users AS u 
+	JOIN k_students AS s
+	ON u.user_id = s.stu_id
+	<where>
+	and user_type = 'ROLE_STU'
+	and s.student_prof IS NULL
+		<if test="stdDept != null and stdDept != ''">
+			and u.user_dept = #{stdDept}
+		</if>			
+	</where>	
+</select>
+
+<select id="matchingProfList" resultType="com.kcy.matching.service.MatchingProfVO">
+	SELECT p.prof_id, 
+		   u.user_name, 
+		   u.user_dept, 
+		   p.prof_lab, 
+		   p.prof_mentee - COUNT(CASE WHEN m.matching_type ='0' THEN 1 END) AS mentee
+	FROM k_professors p 
+	JOIN k_users u
+	ON p.prof_id = u.user_id
+	LEFT JOIN k_matching m
+	ON p.prof_id = m.prof_id 
+	<where>
+		<if test="userDept != null and userDept != ''">
+			and u.user_dept = #{userDept}
+		</if>		
+	</where> 
+	GROUP BY prof_id 	
+	<![CDATA[HAVING mentee > 0]]>
+</select>
+
+<insert id="matching" parameterType="com.kcy.matching.service.MatchingVO">		
+		INSERT INTO k_matching ( prof_id, matching_date, matching_type, matching_id, stu_id ) VALUES
+		<foreach collection="id" item="Id" separator="," >		
+		 (#{userId}, NOW(), '0', nextval(matchigId_seq), #{Id})	
+		</foreach>
+					 
+</insert>
+
+<update id="matchingStd" parameterType="com.kcy.matching.service.MatchingVO">		
+		UPDATE k_students 
+		 SET student_prof = #{userId}
+		WHERE stu_id IN  
+		<foreach collection="id" item="Id" separator="," open="(" close=")" >
+		#{Id}
+		</foreach>
+</update>
+
+<insert id="matchingChangeOrder" parameterType="com.kcy.matching.service.MatchingChangeVO">
+		INSERT INTO k_matching_change
+		( stu_id, matching_change_yn, matching_change_date, prof_id, matching_change_reason, matching_want )
+		VALUES ( #{stuId}, '0', NOW(), #{profId}, #{matchingChangeReason}, #{matchingWant} )
+		ON DUPLICATE KEY UPDATE
+			matching_change_yn = '0',
+			matching_change_date = NOW(),
+			prof_id = #{profId}, 
+			matching_change_reason = #{matchingChangeReason}, 
+			matching_want = #{matchingWant}	
+</insert>
+
+<select id="matchingChangeList" resultType="com.kcy.matching.service.MatchingChangeListVO">
+		SELECT c.stu_id, 
+		       u.user_name, 
+		       u.user_dept, 
+		       s.student_grade, 
+		       s.student_aca_yn,
+		       ku.user_id AS profId,
+		       ku.user_name AS prof, 
+		       c.matching_change_reason, 
+		       ku2.user_id AS wantprofId,
+		       ku2.user_name AS wantprof
+		FROM k_matching_change c
+		JOIN k_users u
+		ON c.stu_id = u.user_id 
+		JOIN k_students s 
+		ON c.stu_id = s.stu_id 
+		JOIN k_users ku
+		ON ku.user_id = s.student_prof  
+		JOIN k_users ku2 
+		ON ku2.user_id = c.matching_want
+		WHERE c.matching_change_yn = '0'		
+</select>
+
+<select id="changeProgress" resultType="com.kcy.matching.service.MatchingChangeVO">
+		SELECT * 
+		FROM k_matching_change 
+		WHERE stu_id = #{stuId}
+</select>
+
+<select id="matchingName" resultType="com.kcy.matching.service.MatchingStdVO">
+	SELECT s.stu_id, 
+	   u.user_name, 
+	   s.student_prof,
+	   ku.user_name AS profname,
+	   s.student_change_status 
+	FROM k_students s 
+	JOIN k_users u 
+	ON s.stu_id = u.user_id
+	JOIN k_users ku
+	ON s.student_prof = ku.user_id	
+	WHERE s.stu_id = #{userId}
+</select>
+
+<update id="matchingType" parameterType="com.kcy.matching.service.MatchingVO">		
+		UPDATE k_matching 
+		   SET matching_type = '1'
+		WHERE stu_id = #{studentId} AND prof_id = #{beforeProf}
+</update>
+
+<update id="matchingYes" parameterType="com.kcy.matching.service.MatchingVO">		
+		UPDATE k_matching_change 
+		SET matching_change_yn = '1'
+		WHERE stu_id = #{studentId} 
+		AND prof_id = #{beforeProf} 
+		AND matching_want = #{userId}
+</update>
+
+<update id="matchingNo" parameterType="com.kcy.matching.service.MatchingChangeVO">
+		UPDATE k_matching_change 
+		SET matching_change_yn = '2', 
+			matching_change_reject = #{matchingChangeReject}
+		WHERE stu_id = #{stuId}
+</update>
+
+<update id="changeStatus" parameterType="com.kcy.matching.service.MatchingStdVO">
+		UPDATE k_students 
+		SET student_change_status = CASE 
+			WHEN student_change_status ='0' THEN '1'
+			WHEN student_change_status ='1' THEN '0'
+		END
+		WHERE stu_id = #{stuId}
+</update>
+
+<delete id="changeCancel" parameterType="com.kcy.matching.service.MatchingChangeVO">
+		DELETE FROM k_matching_change 
+		WHERE stu_id = #{stuId}
+</delete>
+
+</mapper>
